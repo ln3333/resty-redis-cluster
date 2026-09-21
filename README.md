@@ -89,8 +89,12 @@ else
     ngx.say(v)
 end
 ```
-  authentication: 
-  
+
+### Authentication
+
+Use one of the authentication forms below. For Redis 6+ ACL authentication, configure both
+`username` and `password`:
+
 ```lua
 local config = {
     dict_name = "test_locks",               --shared dictionary name for locks, if default value is not used 
@@ -111,7 +115,8 @@ local config = {
     send_timeout = 1000,                    --timeout while sending
     max_redirection = 5,                    --maximum retry attempts for redirection,
     max_connection_attempts = 1,            --maximum retry attempts for connection
-    auth = "pass"                           --set password while setting auth
+    username = "default",                   -- Redis 6+ ACL username
+    password = "pass"                       -- Redis 6+ ACL password
 }
 
 local redis_cluster = require "rediscluster"
@@ -124,6 +129,26 @@ else
     ngx.say(v)
 end 
 ```
+
+For password-only authentication, omit `username`:
+
+```lua
+local config = {
+    -- other Redis Cluster options...
+    password = "pass"
+}
+```
+
+The legacy `auth` option remains supported for backward compatibility:
+
+```lua
+local config = {
+    -- other Redis Cluster options...
+    auth = "pass"                           -- set password while setting auth
+}
+```
+
+Do not configure `auth` together with `username` and `password`.
 
 2. Use pipeline:
 

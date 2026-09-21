@@ -930,3 +930,56 @@ GET /t
 --- timeout: 3
 --- no_error_log
 [alert]
+
+=== TEST 14: username and password authentication
+--- http_config eval: $::HttpConfig
+--- config
+    location /t {
+        content_by_lua_block {
+            local auth_calls = {}
+            package.loaded["resty.redis"] = {
+                new = function()
+                    return {
+                        set_timeouts = function() end,
+                        connect = function() return true end,
+                        get_reused_times = function() return 0 end,
+                        auth = function(_, ...)
+                            local args = {...}
+                            auth_calls[#auth_calls + 1] = select("#", ...) .. ":"
+                                .. table.concat(args, ":")
+                            return true
+                        end,
+                        cluster = function(_, command)
+                            if command == "slots" then
+                                return {{0, 16383, {"127.0.0.1", 7000}}}
+                            end
+                            return "id 127.0.0.1:7000@17000 master - 0 0 1 connected 0-16383\n"
+                        end,
+                        set_keepalive = function() return true end,
+                    }
+                end,
+            }
+            package.loaded["resty.rediscluster"] = nil
+
+            local redis = require "resty.rediscluster"
+            local function connect(name, credentials)
+                credentials.name = name
+                credentials.serv_list = {{ip = "127.0.0.1", port = 7000}}
+                local _, err = redis:new(credentials)
+                assert(not err, err)
+            end
+
+            connect("acl-auth", {username = "default", password = "secret"})
+            connect("legacy-auth", {auth = "legacy-secret"})
+            connect("password-auth", {password = "direct-secret"})
+            ngx.say(table.concat(auth_calls, "\n"))
+        }
+    }
+--- request
+GET /t
+--- response_body
+2:default:secret
+1:legacy-secret
+1:direct-secret
+--- no_error_log
+[error]
