@@ -931,7 +931,7 @@ GET /t
 --- no_error_log
 [alert]
 
-=== TEST 14: username and password authentication
+=== TEST 14: authentication on reused connections
 --- http_config eval: $::HttpConfig
 --- config
     location /t {
@@ -942,7 +942,7 @@ GET /t
                     return {
                         set_timeouts = function() end,
                         connect = function() return true end,
-                        get_reused_times = function() return 0 end,
+                        get_reused_times = function() return 1 end,
                         auth = function(_, ...)
                             local args = {...}
                             auth_calls[#auth_calls + 1] = select("#", ...) .. ":"

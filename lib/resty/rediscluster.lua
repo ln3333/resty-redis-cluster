@@ -64,26 +64,17 @@ end
 
 local function check_auth(self, redis_client)
     local auth = self.config.auth
+    local username = self.config.username
     local password = self.config.password
     if type(auth) ~= "string" and type(password) ~= "string" then
         return true, nil
     end
 
-    local count, err = redis_client:get_reused_times()
-    if count == 0 then
-        local _
-        if type(self.config.username) == "string" and type(password) == "string" then
-            _, err = redis_client:auth(self.config.username, password)
-        else
-            _, err = redis_client:auth(auth or password)
-        end
+    if type(username) == "string" and type(password) == "string" then
+        return redis_client:auth(username, password)
     end
 
-    if err then
-        return nil, err
-    end
-
-    return true, nil
+    return redis_client:auth(auth or password)
 end
 
 local function release_connection(red, config)
